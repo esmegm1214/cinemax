@@ -1,0 +1,69 @@
+services:
+
+  metabase:
+    image: metabase/metabase:v0.64.8.2
+    container_name: cinemax_metabase
+    hostname: metabase
+    restart: unless-stopped
+
+    volumes:
+      - /dev/urandom:/dev/random:ro
+
+    ports:
+      - "${METABASE_PORT:-3001}:3000"
+
+    env_file:
+      - .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - netcinemax
+
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "-I", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+
+  postgres:
+    image: postgres:16
+    container_name: cinemax_postgres
+    hostname: postgres
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    volumes:
+      - /home/dashcloudbi/docker/datos/metabase/cinemax:/var/lib/postgresql/data
+
+    networks:
+      - netcinemax
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+
+networks:
+  netcinemax:
+    external: true
+    name: netcinemax
